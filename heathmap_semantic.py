@@ -15,6 +15,8 @@ TEXT_COLOR = (0, 0, 0)
 EDGE_COLOR = (100, 100, 100)
 MIN_RADIUS = 20
 MAX_RADIUS = 50
+NODE_PADDING = 10
+NODE_MARGIN = 30
 
 # Función para escalar un valor dentro de un rango a otro rango
 def scale_value(value, min_value, max_value, new_min_value, new_max_value):
@@ -57,7 +59,7 @@ class Node:
         for other in self.connections:
             pygame.draw.line(screen, EDGE_COLOR, (self.x, self.y), (other.x, other.y), 2)
 
-# Función para generar nodos aleatoriamente en la ventana, filtrando las palabras
+# Función para generar nodos organizados en la ventana, filtrando las palabras
 def generate_nodes(text):
     stopwords = ["a", "ante", "bajo", "con", "contra", "de", "desde", "en", "entre", "hacia",
                  "hasta", "para", "por", "según", "sin", "sobre", "tras", "durante", "mediante",
@@ -69,20 +71,27 @@ def generate_nodes(text):
     filtered_words = [word for word in words if len(word) >= 4 and word.lower() not in stopwords and not word.endswith("ando") and not word.endswith("iendo")]
 
     num_nodes = len(filtered_words)
-    nodes = {}
+    nodes = []
+    max_horizontal_nodes = int((WIDTH - 2 * NODE_MARGIN) / (MAX_RADIUS * 2 + NODE_PADDING))
+    max_vertical_nodes = int((HEIGHT - 2 * NODE_MARGIN) / (MAX_RADIUS * 2 + NODE_PADDING))
+    num_rows = min(max_vertical_nodes, int(num_nodes / max_horizontal_nodes))
+    num_columns = min(max_horizontal_nodes, num_nodes)
+
+    x_start = int((WIDTH - num_columns * (MAX_RADIUS * 2 + NODE_PADDING)) / 2) + MAX_RADIUS + NODE_MARGIN
+    y_start = int((HEIGHT - num_rows * (MAX_RADIUS * 2 + NODE_PADDING)) / 2) + MAX_RADIUS + NODE_MARGIN
+
     for i in range(num_nodes):
-        x = random.randint(100, WIDTH - 100)
-        y = random.randint(100, HEIGHT - 100)
+        row = i // max_horizontal_nodes
+        column = i % max_horizontal_nodes
+        x = x_start + column * (MAX_RADIUS * 2 + NODE_PADDING)
+        y = y_start + row * (MAX_RADIUS * 2 + NODE_PADDING)
         node_text = filtered_words[i]
-        if node_text in nodes:
-            node = nodes[node_text]
-        else:
-            node = Node(node_text, x, y)
-            nodes[node_text] = node
+        node = Node(node_text, x, y)
+        nodes.append(node)
         node.increment_count()
 
     # Conectar nodos según su relevancia semántica
-    for node1, node2 in combinations(nodes.values(), 2):
+    for node1, node2 in combinations(nodes, 2):
         if node1.text != node2.text:
             synsets1 = wordnet.synsets(node1.text)
             synsets2 = wordnet.synsets(node2.text)
@@ -92,7 +101,7 @@ def generate_nodes(text):
                     node1.add_connection(node2)
                     node2.add_connection(node1)
 
-    return nodes.values()
+    return nodes
 
 # Función principal
 def main():
@@ -126,3 +135,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
