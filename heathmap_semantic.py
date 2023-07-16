@@ -89,8 +89,8 @@ def generate_nodes(text):
     num_rows = min(max_vertical_nodes, int(num_nodes / max_horizontal_nodes))
     num_columns = min(max_horizontal_nodes, num_nodes)
 
-    x_start = int((WIDTH - num_columns * (MAX_RADIUS * 2 + NODE_PADDING)) / 2) + MAX_RADIUS + NODE_MARGIN
-    y_start = int((HEIGHT - num_rows * (MAX_RADIUS * 2 + NODE_PADDING)) / 2) + MAX_RADIUS + NODE_MARGIN
+    x_start = NODE_MARGIN + MAX_RADIUS
+    y_start = NODE_MARGIN + MAX_RADIUS
 
     for i in range(num_nodes):
         row = i // max_horizontal_nodes
@@ -127,18 +127,37 @@ def main():
     pygame.display.set_caption("Mapa Conceptual")
     clock = pygame.time.Clock()
 
+    x_offset = 0
+    y_offset = 0
+
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == pygame.BUTTON_MIDDLE:
+                    y_offset += event.rel[1]  # Desplazarse hacia arriba y hacia abajo con el botón central del mouse
 
         screen.fill(BACKGROUND_COLOR)
 
-        # Generar nodos y dibujarlos en la pantalla
+        # Generar nodos y dibujarlos en la pantalla con los desplazamientos
         nodes = generate_nodes(input("Ingrese el texto: "))
         max_count = max(node.count for node in nodes)
+
+        # Calcular los límites de los nodos
+        min_x = min(node.x for node in nodes)
+        max_x = max(node.x for node in nodes)
+        min_y = min(node.y for node in nodes)
+        max_y = max(node.y for node in nodes)
+
+        # Ajustar los desplazamientos según los límites de los nodos y las dimensiones de la pantalla
+        x_offset = max(-min_x + NODE_MARGIN + MAX_RADIUS, min(WIDTH - max_x - MAX_RADIUS - NODE_MARGIN, x_offset))
+        y_offset = max(-min_y + NODE_MARGIN + MAX_RADIUS, min(HEIGHT - max_y - MAX_RADIUS - NODE_MARGIN, y_offset))
+
         for node in nodes:
+            node.x += x_offset
+            node.y += y_offset
             node.draw(screen, max_count, screen_width, screen_height)
             node.draw_connections(screen, screen_width, screen_height)
 
