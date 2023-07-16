@@ -15,8 +15,8 @@ TEXT_COLOR = (0, 0, 0)
 EDGE_COLOR = (100, 100, 100)
 MIN_RADIUS = 20
 MAX_RADIUS = 50
-NODE_PADDING = 10
-NODE_MARGIN = 30
+NODE_PADDING = 5
+NODE_MARGIN = 10
 
 # Función para escalar un valor dentro de un rango a otro rango
 def scale_value(value, min_value, max_value, new_min_value, new_max_value):
@@ -39,25 +39,37 @@ class Node:
     def increment_count(self):
         self.count += 1
 
-    def draw(self, screen, max_count):
-        # Escalar el radio del círculo según el recuento de ocurrencias
-        radius = scale_value(self.count, 0, max_count, MIN_RADIUS, MAX_RADIUS)
+    def draw(self, screen, max_count, screen_width, screen_height):
+        # Escalar las coordenadas del nodo según el tamaño de la ventana
+        scaled_x = scale_value(self.x, 0, WIDTH, 0, screen_width)
+        scaled_y = scale_value(self.y, 0, HEIGHT, 0, screen_height)
+
+        # Escalar el radio del círculo según el recuento de ocurrencias y el tamaño de la ventana
+        min_radius = MIN_RADIUS * min(screen_width, screen_height) / max(WIDTH, HEIGHT)
+        max_radius = MAX_RADIUS * min(screen_width, screen_height) / max(WIDTH, HEIGHT)
+        radius = scale_value(self.count, 0, max_count, min_radius, max_radius)
+
+        # Escalar el tamaño de la fuente según el tamaño de la ventana
+        font_size = int(radius * 0.6)
 
         # Escalar el color del círculo según el recuento de ocurrencias
         color_value = scale_value(self.count, 0, max_count, 0, 255)
         color = (255 - color_value, color_value, 0)
 
-        gfxdraw.filled_circle(screen, self.x, self.y, radius, color)
-        gfxdraw.aacircle(screen, self.x, self.y, radius, color)
+        gfxdraw.filled_circle(screen, scaled_x, scaled_y, radius, color)
+        gfxdraw.aacircle(screen, scaled_x, scaled_y, radius, color)
 
-        font = pygame.font.Font(None, 20)
+        font = pygame.font.Font(None, font_size)
         text = font.render(f"{self.text} ({self.count})", True, TEXT_COLOR)
-        text_rect = text.get_rect(center=(self.x, self.y))
+        text_rect = text.get_rect(center=(scaled_x, scaled_y))
         screen.blit(text, text_rect)
 
-    def draw_connections(self, screen):
+    def draw_connections(self, screen, screen_width, screen_height):
         for other in self.connections:
-            pygame.draw.line(screen, EDGE_COLOR, (self.x, self.y), (other.x, other.y), 2)
+            pygame.draw.line(screen, EDGE_COLOR, (scale_value(self.x, 0, WIDTH, 0, screen_width),
+                                                  scale_value(self.y, 0, HEIGHT, 0, screen_height)),
+                             (scale_value(other.x, 0, WIDTH, 0, screen_width),
+                              scale_value(other.y, 0, HEIGHT, 0, screen_height)), 2)
 
 # Función para generar nodos organizados en la ventana, filtrando las palabras
 def generate_nodes(text):
@@ -109,7 +121,9 @@ def main():
     nltk.download('wordnet')
 
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    screen_width = pygame.display.Info().current_w
+    screen_height = pygame.display.Info().current_h
+    screen = pygame.display.set_mode((screen_width, screen_height))
     pygame.display.set_caption("Mapa Conceptual")
     clock = pygame.time.Clock()
 
@@ -125,8 +139,8 @@ def main():
         nodes = generate_nodes(input("Ingrese el texto: "))
         max_count = max(node.count for node in nodes)
         for node in nodes:
-            node.draw(screen, max_count)
-            node.draw_connections(screen)
+            node.draw(screen, max_count, screen_width, screen_height)
+            node.draw_connections(screen, screen_width, screen_height)
 
         pygame.display.flip()
         clock.tick(60)
@@ -135,4 +149,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
